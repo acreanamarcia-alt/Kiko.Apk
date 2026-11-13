@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">VitrineApps</string>
+    <string name="tagline">Apps móveis prontos para escalar o seu negócio</string>
+    <string name="sign_in_google">Entrar com Google</string>
+    <string name="sign_out">Sair</string>
+    <string name="nav_store">Vitrine</string>
+    <string name="nav_admin">Painel</string>
+    <string name="nav_visits">Visitas</string>
+    <string name="nav_finance">Financeiro</string>
+    <string name="nav_notifications">Push</string>
+</resources>

@@ -1,0 +1,6 @@
+{
+  "name": "VitrineApps",
+  "description": "E-commerce de aplicativos móveis por nicho com painel administrativo, gestão de estoque, visitas, notificações, financeiro e gateway de pagamento.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

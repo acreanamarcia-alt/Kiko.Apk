@@ -1,0 +1,162 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Perfil de usuário autenticado com função RBAC e segmento de negócio.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID do usuário no Firebase Auth" },
+        "displayName": { "type": "string", "description": "Nome de exibição" },
+        "email": { "type": "string", "description": "E-mail do usuário" },
+        "photoUrl": { "type": "string", "description": "URL da foto de perfil (opcional)" },
+        "role": { "type": "string", "enum": ["cliente", "vendedor", "admin"], "description": "Perfil de acesso" },
+        "businessSegment": { "type": "string", "description": "Segmento comercial do cliente (opcional)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "ServerTimestamp de criação" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "ServerTimestamp de atualização" }
+      },
+      "required": ["userId", "displayName", "email", "role", "createdAt", "updatedAt"]
+    },
+    "AppProduct": {
+      "title": "AppProduct",
+      "description": "Aplicativo móvel disponível para venda no e-commerce por nicho.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "description": "UID do proprietário/administrador" },
+        "title": { "type": "string", "description": "Nome comercial do aplicativo móvel" },
+        "niche": { "type": "string", "enum": ["Lanchonete", "Salão de Beleza", "Barbearia", "Distribuidora", "Marmitex", "Outro"] },
+        "shortDescription": { "type": "string", "description": "Resumo do app para cartão de vitrine" },
+        "fullDescription": { "type": "string", "description": "Descrição detalhada dos módulos" },
+        "price": { "type": "number", "description": "Valor da licença de implantação em BRL" },
+        "monthlyFee": { "type": "number", "description": "Mensalidade de manutenção/suporte em BRL" },
+        "stockCount": { "type": "integer", "description": "Quantidade de licenças em estoque" },
+        "salesCount": { "type": "integer", "description": "Total de vendas realizadas" },
+        "coverKey": { "type": "string", "description": "Identificador da foto de capa padrão" },
+        "coverUri": { "type": "string", "description": "URI de capa personalizada selecionada via Photo Picker (opcional)" },
+        "features": { "type": "array", "description": "Lista limitada de até 10 funcionalidades" },
+        "active": { "type": "boolean", "description": "Se o app está ativo na vitrine" },
+        "rating": { "type": "number", "description": "Avaliação média (0 a 5)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "ServerTimestamp de criação" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "ServerTimestamp de atualização" }
+      },
+      "required": ["ownerId", "title", "niche", "shortDescription", "fullDescription", "price", "monthlyFee", "stockCount", "salesCount", "coverKey", "features", "active", "rating", "createdAt", "updatedAt"]
+    },
+    "AppOrder": {
+      "title": "AppOrder",
+      "description": "Pedido de aplicativo e transação processada no gateway de pagamento em tempo real.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID do comprador/proprietário" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerDocument": { "type": "string" },
+        "productId": { "type": "string" },
+        "productTitle": { "type": "string" },
+        "niche": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "unitPrice": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "gatewayFee": { "type": "number" },
+        "sellerCommission": { "type": "number" },
+        "netAmount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["PIX", "CREDIT_CARD", "BOLETO"] },
+        "paymentStatus": { "type": "string", "enum": ["PENDING", "PROCESSING", "PAID", "FAILED", "REFUNDED"] },
+        "gatewayProvider": { "type": "string" },
+        "gatewayTransactionId": { "type": "string" },
+        "pixCopyPaste": { "type": "string" },
+        "cardLastFour": { "type": "string" },
+        "installments": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerName", "customerEmail", "customerDocument", "productId", "productTitle", "niche", "quantity", "unitPrice", "totalAmount", "gatewayFee", "sellerCommission", "netAmount", "paymentMethod", "paymentStatus", "gatewayProvider", "gatewayTransactionId", "installments", "createdAt", "updatedAt"]
+    },
+    "ClientVisit": {
+      "title": "ClientVisit",
+      "description": "Agendamento de visita técnica/comercial a clientes.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "clientAddress": { "type": "string" },
+        "niche": { "type": "string" },
+        "appProductId": { "type": "string" },
+        "appTitle": { "type": "string" },
+        "consultantName": { "type": "string" },
+        "scheduledDateIso": { "type": "string" },
+        "scheduledTime": { "type": "string" },
+        "visitType": { "type": "string", "enum": ["PRESENCIAL", "ONLINE"] },
+        "status": { "type": "string", "enum": ["AGENDADA", "CONFIRMADA", "CONCLUIDA", "CANCELADA"] },
+        "notes": { "type": "string" },
+        "estimatedValue": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "clientName", "clientPhone", "clientAddress", "niche", "appTitle", "consultantName", "scheduledDateIso", "scheduledTime", "visitType", "status", "notes", "estimatedValue", "createdAt", "updatedAt"]
+    },
+    "FinancialEntry": {
+      "title": "FinancialEntry",
+      "description": "Lançamento financeiro integrado (receitas, despesas, comissões, taxas de gateway).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["VENDA_APP", "MENSALIDADE", "COMISSAO", "TAXA_GATEWAY", "INFRAESTRUTURA", "MARKETING"] },
+        "entryType": { "type": "string", "enum": ["RECEITA", "DESPESA"] },
+        "profileScope": { "type": "string", "enum": ["ADMIN", "VENDEDOR", "CLIENTE"] },
+        "amount": { "type": "number" },
+        "relatedOrderId": { "type": "string" },
+        "niche": { "type": "string" },
+        "referenceMonth": { "type": "string" },
+        "status": { "type": "string", "enum": ["CONFIRMADO", "PENDENTE"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "category", "entryType", "profileScope", "amount", "referenceMonth", "status", "createdAt", "updatedAt"]
+    },
+    "PushNotificationItem": {
+      "title": "PushNotificationItem",
+      "description": "Campanha e registro de notificação push enviada para clientes.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "targetSegment": { "type": "string" },
+        "campaignType": { "type": "string", "enum": ["PROMOCAO", "NOVO_APP", "VISITA", "PAGAMENTO"] },
+        "sentBy": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "dispatchedToDevice": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "body", "targetSegment", "campaignType", "sentBy", "isRead", "dispatchedToDevice", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Perfis de usuários autenticados."
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/AppProduct" },
+      "description": "Catálogo de aplicativos móveis por nicho."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/AppOrder" },
+      "description": "Pedidos e transações em tempo real no gateway de pagamento."
+    },
+    "/visits/{visitId}": {
+      "schema": { "$ref": "#/entities/ClientVisit" },
+      "description": "Agendamentos de visitas a clientes."
+    },
+    "/financial_entries/{entryId}": {
+      "schema": { "$ref": "#/entities/FinancialEntry" },
+      "description": "Lançamentos do controle financeiro por perfil."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/PushNotificationItem" },
+      "description": "Histórico e campanhas de notificações push."
+    }
+  }
+}

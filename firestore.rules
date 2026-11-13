@@ -1,0 +1,374 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.get('email_verified', false) == true && request.auth.token.get('email', '') == 'acreanamarcia@gmail.com')
+      );
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // --- Validation Helpers ---
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             data.role in ['cliente', 'vendedor', 'admin'] &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000)) &&
+             (!('businessSegment' in data) || data.businessSegment == null || (data.businessSegment is string && data.businessSegment.size() <= 80)) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProduct(data) {
+      return data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 100 &&
+             data.niche in ['Lanchonete', 'Salão de Beleza', 'Barbearia', 'Distribuidora', 'Marmitex', 'Outro'] &&
+             data.shortDescription is string && data.shortDescription.size() >= 2 && data.shortDescription.size() <= 240 &&
+             data.fullDescription is string && data.fullDescription.size() >= 2 && data.fullDescription.size() <= 2000 &&
+             data.price is number && data.price >= 0 && data.price <= 1000000 &&
+             data.monthlyFee is number && data.monthlyFee >= 0 && data.monthlyFee <= 100000 &&
+             data.stockCount is int && data.stockCount >= 0 && data.stockCount <= 100000 &&
+             data.salesCount is int && data.salesCount >= 0 && data.salesCount <= 1000000 &&
+             data.coverKey is string && data.coverKey.size() >= 1 && data.coverKey.size() <= 60 &&
+             (!('coverUri' in data) || data.coverUri == null || (data.coverUri is string && data.coverUri.size() <= 1000)) &&
+             data.features is list && data.features.size() <= 10 &&
+             (data.features.size() == 0 || (data.features[0] is string && data.features[0].size() <= 100)) &&
+             data.active is bool &&
+             data.rating is number && data.rating >= 0 && data.rating <= 5 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidOrder(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120 &&
+             data.customerEmail is string && data.customerEmail.size() >= 3 && data.customerEmail.size() <= 160 &&
+             data.customerDocument is string && data.customerDocument.size() >= 4 && data.customerDocument.size() <= 32 &&
+             data.productId is string && isValidId(data.productId) &&
+             data.productTitle is string && data.productTitle.size() >= 1 && data.productTitle.size() <= 120 &&
+             data.niche is string && data.niche.size() >= 1 && data.niche.size() <= 60 &&
+             data.quantity is int && data.quantity >= 1 && data.quantity <= 100 &&
+             data.unitPrice is number && data.unitPrice >= 0 && data.unitPrice <= 1000000 &&
+             data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount <= 10000000 &&
+             data.gatewayFee is number && data.gatewayFee >= 0 && data.gatewayFee <= 1000000 &&
+             data.sellerCommission is number && data.sellerCommission >= 0 && data.sellerCommission <= 1000000 &&
+             data.netAmount is number && data.netAmount >= 0 && data.netAmount <= 10000000 &&
+             data.paymentMethod in ['PIX', 'CREDIT_CARD', 'BOLETO'] &&
+             data.paymentStatus in ['PENDING', 'PROCESSING', 'PAID', 'FAILED', 'REFUNDED'] &&
+             data.gatewayProvider is string && data.gatewayProvider.size() >= 1 && data.gatewayProvider.size() <= 60 &&
+             data.gatewayTransactionId is string && data.gatewayTransactionId.size() >= 1 && data.gatewayTransactionId.size() <= 128 &&
+             (!('pixCopyPaste' in data) || data.pixCopyPaste == null || (data.pixCopyPaste is string && data.pixCopyPaste.size() <= 500)) &&
+             (!('cardLastFour' in data) || data.cardLastFour == null || (data.cardLastFour is string && data.cardLastFour.size() <= 8)) &&
+             data.installments is int && data.installments >= 1 && data.installments <= 12 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidVisit(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.clientName is string && data.clientName.size() >= 1 && data.clientName.size() <= 120 &&
+             data.clientPhone is string && data.clientPhone.size() >= 4 && data.clientPhone.size() <= 40 &&
+             data.clientAddress is string && data.clientAddress.size() >= 2 && data.clientAddress.size() <= 240 &&
+             data.niche is string && data.niche.size() >= 1 && data.niche.size() <= 60 &&
+             (!('appProductId' in data) || data.appProductId == null || (data.appProductId is string && data.appProductId.size() <= 128)) &&
+             data.appTitle is string && data.appTitle.size() >= 1 && data.appTitle.size() <= 120 &&
+             data.consultantName is string && data.consultantName.size() >= 1 && data.consultantName.size() <= 100 &&
+             data.scheduledDateIso is string && data.scheduledDateIso.size() >= 8 && data.scheduledDateIso.size() <= 20 &&
+             data.scheduledTime is string && data.scheduledTime.size() >= 4 && data.scheduledTime.size() <= 10 &&
+             data.visitType in ['PRESENCIAL', 'ONLINE'] &&
+             data.status in ['AGENDADA', 'CONFIRMADA', 'CONCLUIDA', 'CANCELADA'] &&
+             data.notes is string && data.notes.size() <= 600 &&
+             data.estimatedValue is number && data.estimatedValue >= 0 && data.estimatedValue <= 1000000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidFinancialEntry(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+             data.category in ['VENDA_APP', 'MENSALIDADE', 'COMISSAO', 'TAXA_GATEWAY', 'INFRAESTRUTURA', 'MARKETING'] &&
+             data.entryType in ['RECEITA', 'DESPESA'] &&
+             data.profileScope in ['ADMIN', 'VENDEDOR', 'CLIENTE'] &&
+             data.amount is number && data.amount >= 0 && data.amount <= 10000000 &&
+             (!('relatedOrderId' in data) || data.relatedOrderId == null || (data.relatedOrderId is string && data.relatedOrderId.size() <= 128)) &&
+             (!('niche' in data) || data.niche == null || (data.niche is string && data.niche.size() <= 60)) &&
+             data.referenceMonth is string && data.referenceMonth.size() >= 4 && data.referenceMonth.size() <= 20 &&
+             data.status in ['CONFIRMADO', 'PENDENTE'] &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidNotification(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.body is string && data.body.size() >= 1 && data.body.size() <= 500 &&
+             data.targetSegment is string && data.targetSegment.size() >= 1 && data.targetSegment.size() <= 60 &&
+             data.campaignType in ['PROMOCAO', 'NOVO_APP', 'VISITA', 'PAGAMENTO'] &&
+             data.sentBy is string && data.sentBy.size() >= 1 && data.sentBy.size() <= 100 &&
+             data.isRead is bool &&
+             data.dispatchedToDevice is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    // --- Collection Rules ---
+
+    // Admins registry (server/console managed only)
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && request.auth.uid == adminId;
+      allow list, write: if false;
+    }
+
+    // Users profile (PII isolated to owner or verified admin)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().role == 'cliente' &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'email', 'role', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'photoUrl', 'role', 'businessSegment', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           request.auth.uid == userId &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoUrl', 'businessSegment', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Products catalog (mobile apps by niche)
+    match /products/{productId} {
+      allow get: if isSignedIn() && isValidId(productId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(productId) &&
+                       incoming().ownerId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'ownerId', 'title', 'niche', 'shortDescription', 'fullDescription',
+                         'price', 'monthlyFee', 'stockCount', 'salesCount', 'coverKey',
+                         'features', 'active', 'rating', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'ownerId', 'title', 'niche', 'shortDescription', 'fullDescription',
+                         'price', 'monthlyFee', 'stockCount', 'salesCount', 'coverKey', 'coverUri',
+                         'features', 'active', 'rating', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidProduct(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(productId) &&
+                       isValidProduct(incoming()) &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().ownerId == request.auth.uid &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'title', 'niche', 'shortDescription', 'fullDescription',
+                             'price', 'monthlyFee', 'stockCount', 'salesCount',
+                             'coverKey', 'coverUri', 'features', 'active', 'rating', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(productId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    // Orders & Payment Gateway Transactions
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'customerName', 'customerEmail', 'customerDocument',
+                         'productId', 'productTitle', 'niche', 'quantity', 'unitPrice',
+                         'totalAmount', 'gatewayFee', 'sellerCommission', 'netAmount',
+                         'paymentMethod', 'paymentStatus', 'gatewayProvider', 'gatewayTransactionId',
+                         'installments', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'customerName', 'customerEmail', 'customerDocument',
+                         'productId', 'productTitle', 'niche', 'quantity', 'unitPrice',
+                         'totalAmount', 'gatewayFee', 'sellerCommission', 'netAmount',
+                         'paymentMethod', 'paymentStatus', 'gatewayProvider', 'gatewayTransactionId',
+                         'pixCopyPaste', 'cardLastFour', 'installments', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidOrder(incoming()) &&
+                       exists(/databases/$(database)/documents/products/$(incoming().productId));
+
+      allow update: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       isValidOrder(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().productId == existing().productId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           !(existing().paymentStatus in ['PAID', 'REFUNDED']) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'paymentStatus', 'gatewayTransactionId', 'pixCopyPaste', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(orderId) && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Client Visits Scheduling
+    match /visits/{visitId} {
+      allow get: if isSignedIn() && isValidId(visitId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(visitId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'clientName', 'clientPhone', 'clientAddress', 'niche',
+                         'appTitle', 'consultantName', 'scheduledDateIso', 'scheduledTime',
+                         'visitType', 'status', 'notes', 'estimatedValue', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'clientName', 'clientPhone', 'clientAddress', 'niche',
+                         'appProductId', 'appTitle', 'consultantName', 'scheduledDateIso', 'scheduledTime',
+                         'visitType', 'status', 'notes', 'estimatedValue', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidVisit(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(visitId) &&
+                       isValidVisit(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           !(existing().status in ['CONCLUIDA', 'CANCELADA']) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'scheduledDateIso', 'scheduledTime', 'visitType', 'status', 'notes', 'estimatedValue', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(visitId) && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Financial Entries (Integrated Financial Control)
+    match /financial_entries/{entryId} {
+      allow get: if isSignedIn() && isValidId(entryId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(entryId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'title', 'category', 'entryType', 'profileScope',
+                         'amount', 'referenceMonth', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'title', 'category', 'entryType', 'profileScope',
+                         'amount', 'relatedOrderId', 'niche', 'referenceMonth', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidFinancialEntry(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(entryId) &&
+                       isValidFinancialEntry(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'title', 'category', 'entryType', 'profileScope', 'amount', 'referenceMonth', 'status', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(entryId) && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Push Notifications History & Campaigns
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && isValidId(notificationId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(notificationId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'title', 'body', 'targetSegment', 'campaignType',
+                         'sentBy', 'isRead', 'dispatchedToDevice', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'title', 'body', 'targetSegment', 'campaignType',
+                         'sentBy', 'isRead', 'dispatchedToDevice', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidNotification(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(notificationId) &&
+                       isValidNotification(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['isRead', 'dispatchedToDevice', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isSignedIn() && isValidId(notificationId) && (existing().userId == request.auth.uid || isAdmin());
+    }
+  }
+}
