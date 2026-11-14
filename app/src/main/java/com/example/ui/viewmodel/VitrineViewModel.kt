@@ -139,9 +139,8 @@ class VitrineViewModel(
     }
 
     fun adjustStock(product: AppProduct, delta: Long) {
-        val nextStock = (product.stockCount + delta).coerceAtLeast(0L)
         viewModelScope.launch {
-            repository.updateProduct(product.copy(stockCount = nextStock))
+            repository.adjustProductStock(product.id, delta)
                 .onFailure { _feedbackMessage.value = it.localizedMessage ?: "Erro ao atualizar estoque" }
         }
     }

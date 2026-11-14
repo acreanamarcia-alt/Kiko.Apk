@@ -1,38 +1,45 @@
 package com.example.ui.screens
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.ShoppingCartCheckout
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -61,6 +68,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -71,13 +79,17 @@ import com.example.data.model.AppOrder
 import com.example.data.model.AppProduct
 import com.example.ui.components.AppCoverImage
 import com.example.ui.components.EmptyStateCard
+import com.example.ui.components.LayoutBreakpoint
 import com.example.ui.components.MetricKpiCard
+import com.example.ui.components.desktopHoverable
 import com.example.ui.components.formatBrl
 import com.example.ui.components.nicheAccentColor
+import com.example.ui.components.rememberDesktopHoverBorder
 import com.example.ui.viewmodel.UiState
 
 @Composable
 fun AdminPanelScreen(
+    breakpoint: LayoutBreakpoint,
     productsState: UiState<List<AppProduct>>,
     ordersState: UiState<List<AppOrder>>,
     onSaveProduct: (existing: AppProduct?, updated: AppProduct) -> Unit,
@@ -95,10 +107,18 @@ fun AdminPanelScreen(
     val catalogRevenue = products.sumOf { it.price * it.salesCount }
     val liveOrdersRevenue = orders.filter { it.paymentStatus == "PAID" }.sumOf { it.totalAmount }
     val totalStock = products.sumOf { it.stockCount }
+    val activeAppsCount = products.count { it.active }
     val lowStockCount = products.count { it.stockCount <= 5L }
     val totalSales = products.sumOf { it.salesCount }
 
+    val gridColumns = when (breakpoint) {
+        LayoutBreakpoint.COMPACT -> GridCells.Fixed(1)
+        LayoutBreakpoint.MEDIUM -> GridCells.Adaptive(minSize = 320.dp)
+        LayoutBreakpoint.EXPANDED -> GridCells.Adaptive(minSize = 350.dp)
+    }
+
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -112,14 +132,21 @@ fun AdminPanelScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = gridColumns,
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxWidth(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+                .fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = if (breakpoint == LayoutBreakpoint.COMPACT) 16.dp else 20.dp,
+                end = if (breakpoint == LayoutBreakpoint.COMPACT) 16.dp else 20.dp,
+                top = 14.dp,
+                bottom = 88.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Text(
                         text = "Painel Administrativo",
@@ -134,32 +161,72 @@ fun AdminPanelScreen(
                 }
             }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MetricKpiCard(
-                        label = "Faturamento Apps",
-                        value = formatBrl(catalogRevenue),
-                        subtitle = "Gateway hoje: ${formatBrl(liveOrdersRevenue)}",
-                        accentColor = MaterialTheme.colorScheme.secondary,
-                        icon = Icons.Filled.TrendingUp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricKpiCard(
-                        label = "Vendas & Estoque",
-                        value = "$totalSales vend.",
-                        subtitle = "$totalStock licenças em estoque",
-                        accentColor = MaterialTheme.colorScheme.primary,
-                        icon = Icons.Filled.Inventory2,
-                        modifier = Modifier.weight(1f)
-                    )
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                if (breakpoint == LayoutBreakpoint.COMPACT) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        MetricKpiCard(
+                            label = "Faturamento Apps",
+                            value = formatBrl(catalogRevenue),
+                            subtitle = "Gateway hoje: ${formatBrl(liveOrdersRevenue)}",
+                            accentColor = MaterialTheme.colorScheme.secondary,
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MetricKpiCard(
+                            label = "Vendas & Estoque",
+                            value = "$totalSales vend.",
+                            subtitle = "$totalStock licenças em estoque",
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            icon = Icons.Filled.Inventory2,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        MetricKpiCard(
+                            label = "Faturamento Apps",
+                            value = formatBrl(catalogRevenue),
+                            subtitle = "Total acumulado catálogo",
+                            accentColor = MaterialTheme.colorScheme.secondary,
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MetricKpiCard(
+                            label = "Gateway Hoje",
+                            value = formatBrl(liveOrdersRevenue),
+                            subtitle = "${orders.count { it.paymentStatus == "PAID" }} pedidos pagos",
+                            accentColor = Color(0xFF059669),
+                            icon = Icons.Filled.Payments,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MetricKpiCard(
+                            label = "Total Vendas",
+                            value = "$totalSales vend.",
+                            subtitle = "$activeAppsCount apps ativos na vitrine",
+                            accentColor = MaterialTheme.colorScheme.primary,
+                            icon = Icons.Filled.ShoppingCartCheckout,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MetricKpiCard(
+                            label = "Licenças em Estoque",
+                            value = "$totalStock unid.",
+                            subtitle = if (lowStockCount > 0) "$lowStockCount com estoque baixo" else "Estoque saudável",
+                            accentColor = if (lowStockCount > 0) Color(0xFFD97706) else MaterialTheme.colorScheme.primary,
+                            icon = Icons.Filled.Inventory2,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
             if (lowStockCount > 0) {
-                item {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Surface(
                         color = MaterialTheme.colorScheme.tertiaryContainer,
                         shape = RoundedCornerShape(14.dp),
@@ -186,12 +253,15 @@ fun AdminPanelScreen(
             }
 
             if (products.isNotEmpty()) {
-                item {
-                    SalesByNicheChartCard(products = products)
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    SalesByNicheChartCard(
+                        products = products,
+                        isWide = breakpoint != LayoutBreakpoint.COMPACT
+                    )
                 }
             }
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -206,7 +276,8 @@ fun AdminPanelScreen(
                         onClick = {
                             editingProduct = null
                             showCreateEditor = true
-                        }
+                        },
+                        modifier = Modifier.height(48.dp)
                     ) {
                         Text("+ Novo App")
                     }
@@ -214,7 +285,7 @@ fun AdminPanelScreen(
             }
 
             if (products.isEmpty()) {
-                item {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyStateCard(
                         icon = Icons.Filled.ShoppingBag,
                         title = "Nenhum aplicativo cadastrado",
@@ -282,7 +353,10 @@ fun AdminPanelScreen(
 }
 
 @Composable
-private fun SalesByNicheChartCard(products: List<AppProduct>) {
+private fun SalesByNicheChartCard(
+    products: List<AppProduct>,
+    isWide: Boolean
+) {
     val grouped = remember(products) {
         products.groupBy { it.niche }.mapValues { entry ->
             entry.value.sumOf { it.price * it.salesCount }
@@ -304,48 +378,103 @@ private fun SalesByNicheChartCard(products: List<AppProduct>) {
             )
             Spacer(Modifier.height(12.dp))
 
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-            ) {
-                val count = grouped.size.coerceAtLeast(1)
-                val barSlot = size.width / count
-                val barWidth = (barSlot * 0.56f).coerceAtMost(46.dp.toPx())
-
-                grouped.forEachIndexed { index, entry ->
-                    val ratio = (entry.value / maxVal).toFloat().coerceIn(0.08f, 1f)
-                    val barHeight = size.height * ratio
-                    val x = index * barSlot + (barSlot - barWidth) / 2f
-                    val y = size.height - barHeight
-                    drawRoundRect(
-                        color = nicheAccentColor(entry.key),
-                        topLeft = Offset(x, y),
-                        size = Size(barWidth, barHeight),
-                        cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-            grouped.forEach { (niche, value) ->
+            if (isWide) {
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .height(140.dp)
+                    ) {
+                        val count = grouped.size.coerceAtLeast(1)
+                        val barSlot = size.width / count
+                        val barWidth = (barSlot * 0.54f).coerceAtMost(52.dp.toPx())
+
+                        grouped.forEachIndexed { index, entry ->
+                            val ratio = (entry.value / maxVal).toFloat().coerceIn(0.08f, 1f)
+                            val barHeight = size.height * ratio
+                            val x = index * barSlot + (barSlot - barWidth) / 2f
+                            val y = size.height - barHeight
+                            drawRoundRect(
+                                color = nicheAccentColor(entry.key),
+                                topLeft = Offset(x, y),
+                                size = Size(barWidth, barHeight),
+                                cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        grouped.forEach { (niche, value) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = niche,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = nicheAccentColor(niche),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = formatBrl(value),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 3.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .height(120.dp)
                 ) {
-                    Text(
-                        text = niche,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = nicheAccentColor(niche),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = formatBrl(value),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    val count = grouped.size.coerceAtLeast(1)
+                    val barSlot = size.width / count
+                    val barWidth = (barSlot * 0.56f).coerceAtMost(46.dp.toPx())
+
+                    grouped.forEachIndexed { index, entry ->
+                        val ratio = (entry.value / maxVal).toFloat().coerceIn(0.08f, 1f)
+                        val barHeight = size.height * ratio
+                        val x = index * barSlot + (barSlot - barWidth) / 2f
+                        val y = size.height - barHeight
+                        drawRoundRect(
+                            color = nicheAccentColor(entry.key),
+                            topLeft = Offset(x, y),
+                            size = Size(barWidth, barHeight),
+                            cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+                grouped.forEach { (niche, value) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 3.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = niche,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = nicheAccentColor(niche),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = formatBrl(value),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -360,11 +489,16 @@ private fun AdminProductInventoryCard(
     onToggleActive: () -> Unit,
     onRequestDelete: () -> Unit
 ) {
+    val (interactionSource, hoverBorder) = rememberDesktopHoverBorder()
+
     Card(
         shape = RoundedCornerShape(18.dp),
+        border = hoverBorder,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .desktopHoverable(interactionSource)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -501,10 +635,18 @@ private fun ProductEditorDialog(
         mutableStateOf(initial?.coverKey ?: coverKeyForNiche(initial?.niche ?: "Lanchonete"))
     }
 
+    val context = LocalContext.current
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (_: Exception) {
+                }
                 coverUri = uri.toString()
             }
         }

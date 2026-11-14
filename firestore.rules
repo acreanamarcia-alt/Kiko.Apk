@@ -179,7 +179,7 @@ service cloud.firestore {
 
     // Products catalog (mobile apps by niche)
     match /products/{productId} {
-      allow get: if isSignedIn() && isValidId(productId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && isValidId(productId) && (resource == null || existing().ownerId == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
 
       allow create: if isSignedIn() &&

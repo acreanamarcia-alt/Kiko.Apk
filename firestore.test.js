@@ -184,6 +184,9 @@ test("Products: owner CRUD works with aligned query, cross-user rejected", async
   await assertFails(bob.collection("products").doc("prod_1").update({ price: 10.0, updatedAt: serverTimestamp() }));
   await assertFails(bob.collection("products").doc("prod_1").delete());
 
+  // Reading a non-existent/deleted product as signed-in user returns empty snapshot without null dereference
+  await assertSucceeds(alice.collection("products").doc("prod_deleted_missing").get());
+
   // Resource poisoning (invalid doc ID)
   await assertFails(alice.collection("products").doc("invalid id!").set(validProduct(ALICE_UID)));
 });

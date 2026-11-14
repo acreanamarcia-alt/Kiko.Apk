@@ -2,16 +2,20 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -45,6 +49,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,12 +70,16 @@ import com.example.data.model.ClientVisit
 import com.example.data.model.FinancialEntry
 import com.example.data.model.UserProfileView
 import com.example.ui.components.EmptyStateCard
+import com.example.ui.components.LayoutBreakpoint
 import com.example.ui.components.MetricKpiCard
+import com.example.ui.components.desktopHoverable
 import com.example.ui.components.formatBrl
+import com.example.ui.components.rememberDesktopHoverBorder
 import com.example.ui.viewmodel.UiState
 
 @Composable
 fun FinanceReportsScreen(
+    breakpoint: LayoutBreakpoint,
     selectedProfileView: UserProfileView,
     financialState: UiState<List<FinancialEntry>>,
     ordersState: UiState<List<AppOrder>>,
@@ -94,6 +103,7 @@ fun FinanceReportsScreen(
     val saldoLiquido = totalReceitas - totalDespesas
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddEntryDialog = true },
@@ -104,144 +114,175 @@ fun FinanceReportsScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            item {
-                Column {
-                    Text(
-                        text = "Financeiro & Relatórios",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Controle integrado e demonstrativo detalhado por perfil de usuário",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    UserProfileView.entries.forEachIndexed { index, profile ->
-                        SegmentedButton(
-                            selected = selectedProfileView == profile,
-                            onClick = { onSelectProfileView(profile) },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = UserProfileView.entries.size
-                            ),
-                            modifier = Modifier.testTag("profile_tab_${profile.scopeKey.lowercase()}")
-                        ) {
+        if (breakpoint == LayoutBreakpoint.EXPANDED) {
+            Row(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentPadding = PaddingValues(start = 20.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    item {
+                        FinanceHeader()
+                    }
+                    item {
+                        ProfileViewSelector(
+                            selectedProfileView = selectedProfileView,
+                            onSelectProfileView = onSelectProfileView
+                        )
+                    }
+                    item {
+                        ProfileKpiSection(
+                            selectedProfileView = selectedProfileView,
+                            totalReceitas = totalReceitas,
+                            totalDespesas = totalDespesas,
+                            saldoLiquido = saldoLiquido,
+                            orders = orders,
+                            visits = visits
+                        )
+                    }
+                    item {
+                        CashflowComparisonCard(
+                            profileLabel = selectedProfileView.label,
+                            receitas = totalReceitas,
+                            despesas = totalDespesas
+                        )
+                    }
+                    if (orders.isNotEmpty()) {
+                        item {
                             Text(
-                                text = when (profile) {
-                                    UserProfileView.ADMIN -> "Admin"
-                                    UserProfileView.SELLER -> "Vendedor"
-                                    UserProfileView.CLIENT -> "Cliente"
-                                },
-                                maxLines = 1
+                                text = "Transações Gateway em Tempo Real (${orders.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        items(orders, key = { it.id }) { order ->
+                            GatewayOrderLedgerCard(order = order)
+                        }
+                    }
+                }
+
+                VerticalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 20.dp, top = 16.dp, bottom = 88.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Lançamentos — ${selectedProfileView.label} (${scopedEntries.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (scopedEntries.isEmpty()) {
+                        item {
+                            EmptyStateCard(
+                                icon = Icons.Filled.Assessment,
+                                title = "Sem lançamentos para ${selectedProfileView.label}",
+                                subtitle = "Realize uma venda na Vitrine ou toque no botão + para registrar receitas e despesas."
+                            )
+                        }
+                    } else {
+                        items(scopedEntries, key = { it.id }) { entry ->
+                            FinancialEntryCard(
+                                entry = entry,
+                                onDelete = { onDeleteFinancialEntry(entry.id) }
                             )
                         }
                     }
                 }
             }
+        } else {
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 860.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    item {
+                        FinanceHeader()
+                    }
 
-            item {
-                when (selectedProfileView) {
-                    UserProfileView.ADMIN -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            MetricKpiCard(
-                                label = "Receita Bruta",
-                                value = formatBrl(totalReceitas),
-                                subtitle = "Entradas consolidadas",
-                                accentColor = Color(0xFF059669),
-                                icon = Icons.Filled.ArrowUpward,
-                                modifier = Modifier.weight(1f)
+                    item {
+                        ProfileViewSelector(
+                            selectedProfileView = selectedProfileView,
+                            onSelectProfileView = onSelectProfileView
+                        )
+                    }
+
+                    item {
+                        ProfileKpiSection(
+                            selectedProfileView = selectedProfileView,
+                            totalReceitas = totalReceitas,
+                            totalDespesas = totalDespesas,
+                            saldoLiquido = saldoLiquido,
+                            orders = orders,
+                            visits = visits
+                        )
+                    }
+
+                    item {
+                        CashflowComparisonCard(
+                            profileLabel = selectedProfileView.label,
+                            receitas = totalReceitas,
+                            despesas = totalDespesas
+                        )
+                    }
+
+                    if (orders.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Transações Gateway em Tempo Real (${orders.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
-                            MetricKpiCard(
-                                label = "Lucro Líquido",
-                                value = formatBrl(saldoLiquido),
-                                subtitle = "Despesas/Taxas: ${formatBrl(totalDespesas)}",
-                                accentColor = MaterialTheme.colorScheme.primary,
-                                icon = Icons.Filled.AccountBalanceWallet,
-                                modifier = Modifier.weight(1f)
+                        }
+                        items(orders, key = { it.id }) { order ->
+                            GatewayOrderLedgerCard(order = order)
+                        }
+                    }
+
+                    item {
+                        Text(
+                            text = "Lançamentos — ${selectedProfileView.label} (${scopedEntries.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (scopedEntries.isEmpty()) {
+                        item {
+                            EmptyStateCard(
+                                icon = Icons.Filled.Assessment,
+                                title = "Sem lançamentos para ${selectedProfileView.label}",
+                                subtitle = "Realize uma venda na Vitrine ou toque no botão + para registrar receitas e despesas."
+                            )
+                        }
+                    } else {
+                        items(scopedEntries, key = { it.id }) { entry ->
+                            FinancialEntryCard(
+                                entry = entry,
+                                onDelete = { onDeleteFinancialEntry(entry.id) }
                             )
                         }
                     }
-                    UserProfileView.SELLER -> {
-                        val convertedVisits = visits.count { it.status == "CONCLUIDA" }
-                        MetricKpiCard(
-                            label = "Relatório de Comissões (Vendedor)",
-                            value = formatBrl(totalReceitas),
-                            subtitle = "${orders.size} vendas • $convertedVisits visitas convertidas",
-                            accentColor = Color(0xFF059669),
-                            icon = Icons.Filled.Payments
-                        )
-                    }
-                    UserProfileView.CLIENT -> {
-                        val paidOrders = orders.count { it.paymentStatus == "PAID" }
-                        MetricKpiCard(
-                            label = "Investimento & Faturas (Cliente)",
-                            value = formatBrl(totalDespesas),
-                            subtitle = "$paidOrders licença(s) paga(s) via Gateway",
-                            accentColor = MaterialTheme.colorScheme.primary,
-                            icon = Icons.Filled.Receipt
-                        )
-                    }
-                }
-            }
-
-            item {
-                CashflowComparisonCard(
-                    profileLabel = selectedProfileView.label,
-                    receitas = totalReceitas,
-                    despesas = totalDespesas
-                )
-            }
-
-            if (orders.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Transações Gateway em Tempo Real (${orders.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                items(orders, key = { it.id }) { order ->
-                    GatewayOrderLedgerCard(order = order)
-                }
-            }
-
-            item {
-                Text(
-                    text = "Lançamentos — ${selectedProfileView.label} (${scopedEntries.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (scopedEntries.isEmpty()) {
-                item {
-                    EmptyStateCard(
-                        icon = Icons.Filled.Assessment,
-                        title = "Sem lançamentos para ${selectedProfileView.label}",
-                        subtitle = "Realize uma venda na Vitrine ou toque no botão + para registrar receitas e despesas."
-                    )
-                }
-            } else {
-                items(scopedEntries, key = { it.id }) { entry ->
-                    FinancialEntryCard(
-                        entry = entry,
-                        onDelete = { onDeleteFinancialEntry(entry.id) }
-                    )
                 }
             }
         }
@@ -256,6 +297,109 @@ fun FinanceReportsScreen(
                 showAddEntryDialog = false
             }
         )
+    }
+}
+
+@Composable
+private fun FinanceHeader() {
+    Column {
+        Text(
+            text = "Financeiro & Relatórios",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Controle integrado e demonstrativo detalhado por perfil de usuário",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ProfileViewSelector(
+    selectedProfileView: UserProfileView,
+    onSelectProfileView: (UserProfileView) -> Unit
+) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        UserProfileView.entries.forEachIndexed { index, profile ->
+            SegmentedButton(
+                selected = selectedProfileView == profile,
+                onClick = { onSelectProfileView(profile) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = UserProfileView.entries.size
+                ),
+                modifier = Modifier.testTag("profile_tab_${profile.scopeKey.lowercase()}")
+            ) {
+                Text(
+                    text = when (profile) {
+                        UserProfileView.ADMIN -> "Admin"
+                        UserProfileView.SELLER -> "Vendedor"
+                        UserProfileView.CLIENT -> "Cliente"
+                    },
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileKpiSection(
+    selectedProfileView: UserProfileView,
+    totalReceitas: Double,
+    totalDespesas: Double,
+    saldoLiquido: Double,
+    orders: List<AppOrder>,
+    visits: List<ClientVisit>
+) {
+    when (selectedProfileView) {
+        UserProfileView.ADMIN -> {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MetricKpiCard(
+                    label = "Receita Bruta",
+                    value = formatBrl(totalReceitas),
+                    subtitle = "Entradas consolidadas",
+                    accentColor = Color(0xFF059669),
+                    icon = Icons.Filled.ArrowUpward,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricKpiCard(
+                    label = "Lucro Líquido",
+                    value = formatBrl(saldoLiquido),
+                    subtitle = "Despesas/Taxas: ${formatBrl(totalDespesas)}",
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    icon = Icons.Filled.AccountBalanceWallet,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        UserProfileView.SELLER -> {
+            val convertedVisits = visits.count { it.status == "CONCLUIDA" }
+            MetricKpiCard(
+                label = "Relatório de Comissões (Vendedor)",
+                value = formatBrl(totalReceitas),
+                subtitle = "${orders.size} vendas • $convertedVisits visitas convertidas",
+                accentColor = Color(0xFF059669),
+                icon = Icons.Filled.Payments
+            )
+        }
+
+        UserProfileView.CLIENT -> {
+            val paidOrders = orders.count { it.paymentStatus == "PAID" }
+            MetricKpiCard(
+                label = "Investimento & Faturas (Cliente)",
+                value = formatBrl(totalDespesas),
+                subtitle = "$paidOrders licença(s) paga(s) via Gateway",
+                accentColor = MaterialTheme.colorScheme.primary,
+                icon = Icons.Filled.Receipt
+            )
+        }
     }
 }
 
@@ -320,12 +464,16 @@ private fun GatewayOrderLedgerCard(order: AppOrder) {
         "FAILED", "REFUNDED" -> Color(0xFFDC2626)
         else -> Color(0xFFD97706)
     }
+    val (interactionSource, hoverBorder) = rememberDesktopHoverBorder()
 
     Card(
         shape = RoundedCornerShape(16.dp),
+        border = hoverBorder,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .desktopHoverable(interactionSource)
     ) {
         Row(
             modifier = Modifier
@@ -381,11 +529,15 @@ private fun FinancialEntryCard(
 ) {
     val isIncome = entry.entryType == "RECEITA"
     val color = if (isIncome) Color(0xFF059669) else Color(0xFFDC2626)
+    val (interactionSource, hoverBorder) = rememberDesktopHoverBorder()
 
     Card(
         shape = RoundedCornerShape(16.dp),
+        border = hoverBorder,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .desktopHoverable(interactionSource)
     ) {
         Row(
             modifier = Modifier

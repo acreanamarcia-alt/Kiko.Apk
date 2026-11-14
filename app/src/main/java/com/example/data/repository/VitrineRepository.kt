@@ -33,7 +33,8 @@ import kotlin.math.roundToLong
 class VitrineRepository(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth = Firebase.auth,
-    private val paymentGatewayClient: PaymentGatewayClient = PaymentGatewayClient()
+    private val paymentGatewayClient: PaymentGatewayClient = PaymentGatewayClient(),
+    val productRepository: AppProductRepository = AppProductRepository(db, auth)
 ) {
     constructor(context: Context) : this(
         db = FirebaseFirestore.getInstance(
@@ -81,19 +82,7 @@ class VitrineRepository(
 
     // --- Real-time Streams ---
 
-    fun observeProducts(ownerId: String): Flow<List<AppProduct>> = flow {
-        val path = "products"
-        emitAll(
-            db.collection(path)
-                .whereEqualTo("ownerId", ownerId)
-                .snapshots()
-                .map { snap ->
-                    snap.toObjects(AppProduct::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
-                        .sortedByDescending { it.salesCount }
-                }
-                .catch { error -> logAndRethrow(error, OperationType.LIST, path, ownerId) }
-        )
-    }
+    fun observeProducts(ownerId: String): Flow<List<AppProduct>> = productRepository.observeProducts(ownerId)
 
     fun observeOrders(userId: String): Flow<List<AppOrder>> = flow {
         val path = "orders"
@@ -170,70 +159,19 @@ class VitrineRepository(
 
     // --- Products CRUD (Admin & Store) ---
 
-    suspend fun createProduct(product: AppProduct): Result<String> {
-        val uid = requireUserId()
-        val id = "app_${UUID.randomUUID().toString().replace("-", "").take(12)}"
-        val docRef = db.collection("products").document(id)
-        return try {
-            docRef.set(product.toCreateMap(uid)).await()
-            Result.success(id)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.CREATE, docRef.path)
-            Result.failure(e)
-        }
-    }
+    suspend fun createProduct(product: AppProduct): Result<String> = productRepository.createProduct(product)
 
-    suspend fun updateProduct(product: AppProduct): Result<Unit> {
-        val uid = requireUserId()
-        require(product.id.isNotBlank()) { "ID do produto obrigatório para atualização" }
-        val docRef = db.collection("products").document(product.id)
-        return try {
-            val payload = if (product.createdAt != null) {
-                product.copy(ownerId = uid, updatedAt = null)
-            } else {
-                val snap = docRef.get().await()
-                val existingCreatedAt = snap.getTimestamp("createdAt")
-                    ?: return Result.failure(IllegalStateException("Produto sem createdAt"))
-                product.copy(ownerId = uid, createdAt = existingCreatedAt, updatedAt = null)
-            }
-            docRef.set(payload).await()
-            Result.success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
-            Result.failure(e)
-        }
-    }
+    suspend fun updateProduct(product: AppProduct): Result<Unit> = productRepository.updateProduct(product)
 
-    suspend fun deleteProduct(productId: String): Result<Unit> {
-        requireUserId()
-        val docRef = db.collection("products").document(productId)
-        return try {
-            docRef.delete().await()
-            Result.success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.DELETE, docRef.path)
-            Result.failure(e)
-        }
-    }
+    suspend fun updateProductStock(productId: String, newStockCount: Long): Result<Unit> =
+        productRepository.updateStock(productId, newStockCount)
 
-    suspend fun getProductById(productId: String): Result<AppProduct?> {
-        val docRef = db.collection("products").document(productId)
-        return try {
-            val snap = docRef.get().await()
-            Result.success(snap.toObject(AppProduct::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.GET, docRef.path)
-            Result.failure(e)
-        }
-    }
+    suspend fun adjustProductStock(productId: String, delta: Long): Result<Long> =
+        productRepository.adjustStock(productId, delta)
+
+    suspend fun deleteProduct(productId: String): Result<Unit> = productRepository.deleteProduct(productId)
+
+    suspend fun getProductById(productId: String): Result<AppProduct?> = productRepository.getProductById(productId)
 
     // --- Real-Time Payment Gateway & Order Checkout ---
 

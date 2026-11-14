@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -62,6 +63,8 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
+import com.example.ui.components.LayoutBreakpoint
+import com.example.ui.components.layoutBreakpointFor
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -105,7 +108,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
         )
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -120,168 +123,25 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
             .systemBarsPadding(),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 560.dp)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Surface(
-                    color = Color(0xFF10B981).copy(alpha = 0.18f),
-                    shape = RoundedCornerShape(50.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Smartphone,
-                            contentDescription = null,
-                            tint = Color(0xFF34D399),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "PLATAFORMA DE APPS POR NICHO",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF6EE7B7),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+        val isDesktop = layoutBreakpointFor(maxWidth) == LayoutBreakpoint.EXPANDED
 
-                Spacer(Modifier.height(16.dp))
-
-                Text(
-                    text = "VitrineApps",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "E-commerce completo de aplicativos móveis para Lanchonete, Salão, Barbearia, Distribuidora de Bebidas & Gás e Marmitex — com gestão de estoque, visitas, push, financeiro por perfil e pagamento em tempo real.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color(0xFFCBD5E1)
-                )
-
-                Spacer(Modifier.height(22.dp))
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(end = 8.dp)
-                ) {
-                    items(previews) { item ->
-                        Card(
-                            modifier = Modifier
-                                .width(156.dp)
-                                .height(132.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                Image(
-                                    painter = painterResource(id = item.drawableRes),
-                                    contentDescription = item.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f))
-                                            )
-                                        )
-                                )
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomStart)
-                                        .padding(10.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        if (isDesktop) {
+            Row(
+                modifier = Modifier
+                    .widthIn(max = 1140.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 36.dp, vertical = 28.dp),
+                horizontalArrangement = Arrangement.spacedBy(36.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(22.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.VerifiedUser,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Acesso Seguro à Loja & Painel",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(Modifier.height(10.dp))
-
-                    val highlights = listOf(
-                        "Catálogo com capas, edição, estoque e exclusão",
-                        "Gateway de pagamento PIX, Cartão e Boleto em tempo real",
-                        "Relatórios financeiros por perfil (Admin, Vendedor e Cliente)"
-                    )
-                    highlights.forEach { line ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = line,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    if (!errorMessage.isNullOrBlank()) {
-                        Spacer(Modifier.height(10.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = errorMessage!!,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(18.dp))
-
-                    Button(
-                        onClick = {
+                Column(modifier = Modifier.weight(1.25f)) {
+                    AuthHeroSection(previews = previews)
+                }
+                Box(modifier = Modifier.weight(0.95f)) {
+                    AuthSignInCard(
+                        isLoading = isLoading,
+                        errorMessage = errorMessage,
+                        onSignInClick = {
                             errorMessage = null
                             isLoading = true
                             onGoogleSignInClicked(
@@ -301,36 +161,250 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
                                     errorMessage = "Login cancelado. Selecione uma conta Google para continuar."
                                 }
                             )
-                        },
-                        enabled = !isLoading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("google_sign_in_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.Lock,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Entrar com Google",
-                                style = MaterialTheme.typography.labelLarge
-                            )
                         }
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 580.dp)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                AuthHeroSection(previews = previews)
+                Spacer(Modifier.height(24.dp))
+                AuthSignInCard(
+                    isLoading = isLoading,
+                    errorMessage = errorMessage,
+                    onSignInClick = {
+                        errorMessage = null
+                        isLoading = true
+                        onGoogleSignInClicked(
+                            context = context,
+                            credentialManager = credentialManager,
+                            onAuthSuccess = {
+                                isLoading = false
+                                onAuthSuccess()
+                            },
+                            onAuthError = { msg ->
+                                isLoading = false
+                                errorMessage = msg
+                            },
+                            scope = scope,
+                            onAuthCancelled = {
+                                isLoading = false
+                                errorMessage = "Login cancelado. Selecione uma conta Google para continuar."
+                            }
+                        )
                     }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthHeroSection(previews: List<ShowcasePreview>) {
+    Column {
+        Surface(
+            color = Color(0xFF10B981).copy(alpha = 0.18f),
+            shape = RoundedCornerShape(50.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Smartphone,
+                    contentDescription = null,
+                    tint = Color(0xFF34D399),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "PLATAFORMA DE APPS POR NICHO",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF6EE7B7),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(id = R.drawable.vitrine_launcher_icon_1794559013037),
+                contentDescription = "Logo VitrineApps",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "VitrineApps",
+                style = MaterialTheme.typography.displaySmall,
+                color = Color.White
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "E-commerce completo de aplicativos móveis para Lanchonete, Salão, Barbearia, Distribuidora de Bebidas & Gás e Marmitex — com gestão de estoque, visitas, push, financeiro por perfil e pagamento em tempo real.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFFCBD5E1)
+        )
+
+        Spacer(Modifier.height(22.dp))
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(end = 8.dp)
+        ) {
+            items(previews) { item ->
+                Card(
+                    modifier = Modifier
+                        .width(156.dp)
+                        .height(132.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Image(
+                            painter = painterResource(id = item.drawableRes),
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f))
+                                    )
+                                )
+                        )
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(10.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthSignInCard(
+    isLoading: Boolean,
+    errorMessage: String?,
+    onSignInClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(modifier = Modifier.padding(22.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.VerifiedUser,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Acesso Seguro à Loja & Painel",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+
+            val highlights = listOf(
+                "Catálogo com capas, edição, estoque e exclusão",
+                "Gateway de pagamento PIX, Cartão e Boleto em tempo real",
+                "Relatórios financeiros por perfil (Admin, Vendedor e Cliente)"
+            )
+            highlights.forEach { line ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (!errorMessage.isNullOrBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            Button(
+                onClick = onSignInClick,
+                enabled = !isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .testTag("google_sign_in_button"),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Entrar com Google",
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }

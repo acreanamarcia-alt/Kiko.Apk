@@ -20,48 +20,6 @@ data class UserProfile(
 )
 
 @IgnoreExtraProperties
-data class AppProduct(
-    @DocumentId val id: String = "",
-    val ownerId: String = "",
-    val title: String = "",
-    val niche: String = "Lanchonete",
-    val shortDescription: String = "",
-    val fullDescription: String = "",
-    val price: Double = 0.0,
-    val monthlyFee: Double = 0.0,
-    val stockCount: Long = 0L,
-    val salesCount: Long = 0L,
-    val coverKey: String = "lanchonete",
-    val coverUri: String? = null,
-    val features: List<String> = emptyList(),
-    val active: Boolean = true,
-    val rating: Double = 4.9,
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null
-) {
-    fun toCreateMap(ownerId: String): Map<String, Any> {
-        return mapOf(
-            "ownerId" to ownerId,
-            "title" to title.trim(),
-            "niche" to niche,
-            "shortDescription" to shortDescription.trim(),
-            "fullDescription" to fullDescription.trim(),
-            "price" to price,
-            "monthlyFee" to monthlyFee,
-            "stockCount" to stockCount,
-            "salesCount" to salesCount,
-            "coverKey" to coverKey,
-            "coverUri" to coverUri?.takeIf { it.isNotBlank() },
-            "features" to features.take(10),
-            "active" to active,
-            "rating" to rating,
-            "createdAt" to FieldValue.serverTimestamp(),
-            "updatedAt" to FieldValue.serverTimestamp()
-        ).filterValues { it != null } as Map<String, Any>
-    }
-}
-
-@IgnoreExtraProperties
 data class AppOrder(
     @DocumentId val id: String = "",
     val userId: String = "",

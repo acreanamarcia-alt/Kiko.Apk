@@ -5,14 +5,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
@@ -60,12 +65,16 @@ import com.example.data.model.AppNiches
 import com.example.data.model.AppProduct
 import com.example.data.model.ClientVisit
 import com.example.ui.components.EmptyStateCard
+import com.example.ui.components.LayoutBreakpoint
 import com.example.ui.components.MetricKpiCard
+import com.example.ui.components.desktopHoverable
 import com.example.ui.components.formatBrl
+import com.example.ui.components.rememberDesktopHoverBorder
 import com.example.ui.viewmodel.UiState
 
 @Composable
 fun VisitsScreen(
+    breakpoint: LayoutBreakpoint,
     visitsState: UiState<List<ClientVisit>>,
     productsState: UiState<List<AppProduct>>,
     onScheduleVisit: (ClientVisit) -> Unit,
@@ -79,11 +88,19 @@ fun VisitsScreen(
     val products = (productsState as? UiState.Success)?.data.orEmpty()
 
     val openVisits = visits.count { it.status == "AGENDADA" || it.status == "CONFIRMADA" }
+    val completedVisits = visits.count { it.status == "CONCLUIDA" }
     val pipelineValue = visits.filter { it.status != "CANCELADA" }.sumOf { it.estimatedValue }
 
     val filtered = visits.filter { statusFilter == "TODAS" || it.status == statusFilter }
 
+    val gridColumns = when (breakpoint) {
+        LayoutBreakpoint.COMPACT -> GridCells.Fixed(1)
+        LayoutBreakpoint.MEDIUM -> GridCells.Adaptive(minSize = 330.dp)
+        LayoutBreakpoint.EXPANDED -> GridCells.Adaptive(minSize = 340.dp)
+    }
+
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showScheduleDialog = true },
@@ -94,14 +111,21 @@ fun VisitsScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = gridColumns,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+            contentPadding = PaddingValues(
+                start = if (breakpoint == LayoutBreakpoint.COMPACT) 16.dp else 20.dp,
+                end = if (breakpoint == LayoutBreakpoint.COMPACT) 16.dp else 20.dp,
+                top = 14.dp,
+                bottom = 88.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Text(
                         text = "Agenda de Visitas a Clientes",
@@ -116,7 +140,7 @@ fun VisitsScreen(
                 }
             }
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -124,7 +148,7 @@ fun VisitsScreen(
                     MetricKpiCard(
                         label = "Visitas Ativas",
                         value = "$openVisits",
-                        subtitle = "${visits.count { it.status == "CONCLUIDA" }} concluídas",
+                        subtitle = "$completedVisits concluídas",
                         accentColor = MaterialTheme.colorScheme.primary,
                         icon = Icons.Filled.CalendarMonth,
                         modifier = Modifier.weight(1f)
@@ -137,10 +161,20 @@ fun VisitsScreen(
                         icon = Icons.Filled.DoneAll,
                         modifier = Modifier.weight(1f)
                     )
+                    if (breakpoint != LayoutBreakpoint.COMPACT) {
+                        MetricKpiCard(
+                            label = "Taxa Conclusão",
+                            value = "$completedVisits / ${visits.size}",
+                            subtitle = "Visitas convertidas",
+                            accentColor = Color(0xFF059669),
+                            icon = Icons.Filled.CheckCircle,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(listOf("TODAS", "AGENDADA", "CONFIRMADA", "CONCLUIDA", "CANCELADA")) { status ->
                         FilterChip(
@@ -153,7 +187,7 @@ fun VisitsScreen(
             }
 
             if (filtered.isEmpty()) {
-                item {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyStateCard(
                         icon = Icons.Filled.CalendarMonth,
                         title = "Nenhuma visita agendada neste filtro",
@@ -197,12 +231,16 @@ private fun VisitCard(
         else -> Color(0xFFD97706)
     }
     val isTerminal = visit.status == "CONCLUIDA" || visit.status == "CANCELADA"
+    val (interactionSource, hoverBorder) = rememberDesktopHoverBorder()
 
     Card(
         shape = RoundedCornerShape(18.dp),
+        border = hoverBorder,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .desktopHoverable(interactionSource)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
